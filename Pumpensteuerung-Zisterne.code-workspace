@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"name": "Pumpensteuerung-Zisterne",
+			"path": "."
+		},
+		{
+			"name": "AVRnative",
+			"path": "../../AVRnative"
+		},
+		{
+			"name": "my_Template_Arduino",
+			"path": "../my_Template_Arduino"
+		},
+		{
+			"path": "../../_Micropython/Test1"
+		},
+		{
+			"path": "../../WebRelais1"
+		}
+	],
+	"settings": {}
+}
