@@ -12,6 +12,7 @@ Takt      : 16MHz extern
 Datum     : 11.05.2025
 Version   : 1.0
 Autor     : c 2025 by Peter Lampe
+
 */
 //------------------------------------- Libraries -------------------------------------
 #include <Arduino.h>
