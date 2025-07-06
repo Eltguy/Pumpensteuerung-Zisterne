@@ -112,7 +112,7 @@ void setup(void)
   move_Wheel(OFF);                          //Animation aus
                                             //Timer1 initialisieren 
   TCCR1A=0x00;                              //Normal Mode
-  TCCR1B=(1<<CS12);                         //Prescaler = 256; 
+  TCCR1B=(1<<CS12);                         //Prescaler = 256; timer läuft
   TCNT1=0xBDC;                              //Timer1 Preloading für 1s im Hex-Format
   TIMSK1=(1<<TOIE1);                        //Interruptfreigabe
 
@@ -167,39 +167,31 @@ if (Frost==false)                               //ist Brunnen frostfrei?
       {                                         //dann
         move_Wheel(OFF);                        //statisches Symbol anzeigen
       }
+ 
 
-  if(digitalRead (OnLevel) || digitalRead (SKIM))
+
+//-----------------------------neue Passage ab hier---------------------------------
+    if(digitalRead (OnLevel) || digitalRead (SKIM))
                                                 //Abpumplevel erreicht oder Schwimmerschalter an?
-    {                                           //ja, dann
-      digitalWrite(REL, ON);                    //Relais einschalten
-      for (int i =0; i< ONTIME; i++)            //und Abschaltverzögerung starten
-      {
-        _delay_ms(450);                         //Verzögerung für Schleifendurchlauf =1s
-        move_Wheel(ON);                         //animiertes Symbol ausgeben
-        get_Temp();                             //Temperaturerfassung
-        show_Level();                           //und Pegelanzeige vornehmen
-      }                                         //wenn Zeit abgelaufen,
-      digitalWrite(REL, OFF);                   //dann Relais aus
-    }
-   
-  if(!digitalRead(LV1) && digitalRead(REL))     //unterer Abschaltpegel unterschritten
-                                                //und Pumpe läuft?
-    {                                           //ja, dann
-     /*
-      for (int i =0; i< ONTIME; i++)             //Abschaltverzögerung starten
-      {
-        _delay_ms(450);                         //Verzögerung für Schleifendurchlauf =1s
-        move_Wheel(ON);                         //animiertes Symbol ausgeben
-        get_Temp();                             //Temperaturerfassung
-        show_Level();                           //und Pegelanzeige vornehmen
+      {                                         //ja, dann
+        TCCR1B=(1<<CS12);                       //Prescaler = 256; Timer1 läuft, Nachlaufzeit
       }                                         
-    */  
-                                                //nach Zeitablauf
-      digitalWrite(REL, OFF);                   //dRelais aus und
-      move_Wheel(OFF);                          //statisches AUS-Symbol ausgeben
-    }
+     
+    if(!digitalRead(LV1))                       //unterer Abschaltpegel unterschritten?
+      {
+        if(!digitalRead(ONSWITCH))              //auch Ein-Schalter gedrückt?
+          {                                     //ja, dann  
+            digitalWrite(REL, ON);              //Relais an,solange gedrückt ist
+         }
+         else if(!digitalRead(REL))             //nein, Ein-Schalter nicht gedrückt aber Relais aus?
+         {                                      //dann
+           TCCR1B=(1<<CS12);                    //Prescaler = 256; Timer für Nachlauf starten
+         }
+      }                                      
+//------------------------------------neuePassage Ende  ----------------------------------------    
  
  
+
   }
 else                                            //Frost wurde erkannt,
   {                                             //alle Funktionen aus
@@ -306,7 +298,6 @@ void move_Wheel(bool action)                //zeigt Aktivitätssymbole für Pump
   return;                                   //Rücksprung
 }
 //-------------------------------------------------------------------------------------------
-
 ISR(TIMER1_OVF_vect)
 {
   TimeDelay++;                              //Verzögerungszeit hochzählen  
@@ -322,3 +313,5 @@ ISR(TIMER1_OVF_vect)
   }
   TCNT1 = 0xBDC;                            //erneutes Timer-Preloading für 1s im Hex-Format  
 }
+//-------------------------------------------------------------------------------------------
+// Ende der Datei main.cpp
