@@ -317,7 +317,7 @@ ISR(TIMER1_OVF_vect)
   else
   {
     digitalWrite(REL, OFF);                 //Relais aus
-    TIMSK1=~(1<<TOIE1);                     //Interrupt disablen
+    TCCR1B=0;                               //Timer anhalten und
     TimeDelay==0;                           //Verzögerungszzähler wieder zurücksetzen
   }
   TCNT1 = 0xBDC;                            //erneutes Timer-Preloading für 1s im Hex-Format  
