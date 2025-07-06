@@ -18,7 +18,7 @@ Autor     : c 2025 by Peter Lampe
 #include <Arduino.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <Wire.h>
+//#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 //--------------------------------------- Defines -------------------------------------
 #if defined(ARDUINO) && ARDUINO >= 100
@@ -41,7 +41,7 @@ Autor     : c 2025 by Peter Lampe
 #define SOMMER 1                                        //Deffinition Jahreszeit 
 #define WINTER 0
 #define FROSTTEMP 2                                     //Umschalttemperatur für Frosterkennung
-#define ONTIME 60                                       //Nachlaufzeit der Pumpe in Sekunden
+#define ONTIME 6                                       //Nachlaufzeit der Pumpe in Sekunden
 
 //---------------------------------- globale Variablen --------------------------------
 bool Frost=false;                                       //Flag zur Frost-Erfassung (0=kein Frost, 1=Frost)
@@ -50,6 +50,8 @@ bool Level[5]={0, 0, 0, 0, 0};                          //Feld mit Schaltzustän
                                                         //zum Start "Zisterne leer" initialisieren
 uint8_t OnLevel=LV4;                                    //Einschaltlevel (für Sommer initialisiert)
 uint8_t OFFLevel=LV1;                                   //Abschaltlevel, unabhängig von der Jahreszeit
+volatile uint8_t TimeDelay=0;                           //Timer1 Verzögerungszähler in Sekunden
+                           
 
 uint8_t my1[8] = {0x0,0x4,0x4,0x4,0x4,0x4,0x0};         //Sonderzeichendefinition für Display
 uint8_t my2[8] = {0x0,0x1,0x2,0x4,0x8,0x10,0x0};
@@ -108,6 +110,13 @@ void setup(void)
   lcd.setCursor(0, 1);                      //Tastenmenü positionieren
   lcd.print("On <-- S --> Off");            //und anzeigen
   move_Wheel(OFF);                          //Animation aus
+                                            //Timer1 initialisieren 
+  TCCR1A=0x00;                              //Normal Mode
+  TCCR1B=(1<<CS12);                         //Prescaler = 256; 
+  TCNT1=0xBDC;                              //Timer1 Preloading für 1s im Hex-Format
+  TIMSK1=(1<<TOIE1);                        //Interruptfreigabe
+
+//while(1);//Debugstop                        //Debugstop mit Terminalausgabe
 }
 
 //------------------------------------- Main loop -------------------------------------
@@ -176,13 +185,16 @@ if (Frost==false)                               //ist Brunnen frostfrei?
   if(!digitalRead(LV1) && digitalRead(REL))     //unterer Abschaltpegel unterschritten
                                                 //und Pumpe läuft?
     {                                           //ja, dann
-     for (int i =0; i< ONTIME; i++)             //Abschaltverzögerung starten
+     /*
+      for (int i =0; i< ONTIME; i++)             //Abschaltverzögerung starten
       {
         _delay_ms(450);                         //Verzögerung für Schleifendurchlauf =1s
         move_Wheel(ON);                         //animiertes Symbol ausgeben
         get_Temp();                             //Temperaturerfassung
         show_Level();                           //und Pegelanzeige vornehmen
-      }                                         //nach Zeitablauf
+      }                                         
+    */  
+                                                //nach Zeitablauf
       digitalWrite(REL, OFF);                   //dRelais aus und
       move_Wheel(OFF);                          //statisches AUS-Symbol ausgeben
     }
@@ -294,3 +306,19 @@ void move_Wheel(bool action)                //zeigt Aktivitätssymbole für Pump
   return;                                   //Rücksprung
 }
 //-------------------------------------------------------------------------------------------
+
+ISR(TIMER1_OVF_vect)
+{
+  TimeDelay++;                              //Verzögerungszeit hochzählen  
+  if (TimeDelay<=ONTIME)
+  {
+     digitalWrite(REL,ON);                  //Relais an
+  }
+  else
+  {
+    digitalWrite(REL, OFF);                 //Relais aus
+    TIMSK1=~(1<<TOIE1);                     //Interrupt disablen
+    TimeDelay==0;                           //Verzögerungszzähler wieder zurücksetzen
+  }
+  TCNT1 = 0xBDC;                            //erneutes Timer-Preloading für 1s im Hex-Format  
+}
