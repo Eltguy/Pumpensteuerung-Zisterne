@@ -2,9 +2,12 @@
 
 ## Systembeschreibung
 
-![](assets/20250708_143132_Pumpensteuerung_mit K-Sensor03.jpg)
+![](Dokumentation\Fotos\Pumpensteuerung mit K-Sensor03.jpg)
+
+
 
 Das hier beschriebene Projekt ist eine Pumpensteuerung für eine Zisterne oder einen Regenwassersammler. Ich besitze eine 1m tiefe Betonzisterne mit einem Fassungsvermögen von 1m³, die mit Regenwasser vom Dach gespeist wird. Hier muss ich sicherstellen, dass diese nicht überläuft. Andererseits möchte ich gezielt Wasser abpumpen, um dieses im Garten zu verrieseln oder Fässer zur allgemeinen Wasserentnahme zu füllen. Daraus ist dieses Projekt entstanden.
+
 Kernstück der Anlage ist ein Steuergerät für eine Brunnenpumpe. Die Steuerung erfolgt mit einem Arduino Nano, dessen Firmware unter VSCode/PlatformIO mittels Arduino-Platform entwickelt wurde und hier abgelegt ist. Die Anzeigefunktion erfolgt über ein HD44780/1602 LCD-Display. Angeschlossen sind ein Konduktivsensor (Leitfähigkeitssensor), der über fünf Sonden in verschiedenen Wassertiefen, den Wasserstand im Behälter erfasst. Die Pegelstände werden angezeigt. Ein jahreszeitlich abhängiger Maximalpegel kann ausgewählt werden, der automatisch durch die Pumpensteuerung konstant gehalten wird. Über zwei Taster EIN/AUS, kann die Pumpe manuell gesteuert werden, um  Wassers gezielt zu entnehmen.
 Ein weiterer Sensor überwacht die Temperatur und schaltet bei Frostgefahr die Anlage ab.
 Eine Anpassung der Anlage, insbesondere des Konduktivsensors, auf eigene Belange, ist jederzeit möglich.
