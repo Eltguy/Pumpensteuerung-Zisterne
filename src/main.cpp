@@ -43,6 +43,7 @@ Autor     : c 2025 by Peter Lampe
 #define FROSTTEMP 2                                     //Umschalttemperatur für Frosterkennung
 #define ONTIME 60                                       //Nachlaufzeit der Pumpe in Sekunden (60)
 
+
 //---------------------------------- globale Variablen --------------------------------
 bool Frost=false;                                       //Flag zur Frost-Erfassung (0=kein Frost, 1=Frost)
 bool Season=SOMMER;                                     //Jahreszeit, mit Sommer initialisieren
