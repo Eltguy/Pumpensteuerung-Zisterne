@@ -10,7 +10,7 @@ Hardwareversion: V1.0
 Prozessor : ARDUINO Nano Board
 Takt      : 16MHz extern 
 Datum     : 11.05.2025
-Version   : 1.0
+Version   : 1.1
 Autor     : c 2025 by Peter Lampe
 
 */
@@ -18,7 +18,7 @@ Autor     : c 2025 by Peter Lampe
 #include <Arduino.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <Wire.h>
+//#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 //--------------------------------------- Defines -------------------------------------
 #if defined(ARDUINO) && ARDUINO >= 100
@@ -41,7 +41,7 @@ Autor     : c 2025 by Peter Lampe
 #define SOMMER 1                                        //Deffinition Jahreszeit 
 #define WINTER 0
 #define FROSTTEMP 2                                     //Umschalttemperatur für Frosterkennung
-#define ONTIME 60                                       //Nachlaufzeit der Pumpe in Sekunden
+#define ONTIME 60                                       //Nachlaufzeit der Pumpe in Sekunden (60)
 
 //---------------------------------- globale Variablen --------------------------------
 bool Frost=false;                                       //Flag zur Frost-Erfassung (0=kein Frost, 1=Frost)
@@ -50,6 +50,7 @@ bool Level[5]={0, 0, 0, 0, 0};                          //Feld mit Schaltzustän
                                                         //zum Start "Zisterne leer" initialisieren
 uint8_t OnLevel=LV4;                                    //Einschaltlevel (für Sommer initialisiert)
 uint8_t OFFLevel=LV1;                                   //Abschaltlevel, unabhängig von der Jahreszeit
+volatile uint8_t TimeDelay=0;                           //Timer1 Verzögerungszähler in Sekunden                        
 
 uint8_t my1[8] = {0x0,0x4,0x4,0x4,0x4,0x4,0x0};         //Sonderzeichendefinition für Display
 uint8_t my2[8] = {0x0,0x1,0x2,0x4,0x8,0x10,0x0};
@@ -73,10 +74,10 @@ DallasTemperature sensors(&oneWire);        //Übergeben Sie unsere oneWire-Refe
 LiquidCrystal_I2C lcd(0x27,20,4);           //LCD an I²C-Adresse 0x27; 16 Zeichen; 2 Zeilen 
                                             //SDA=A4; SCL=A5 at ARDUINO NANO by default
 
-//--------------------------------------- Setup ---------------------------------------
+                                            //--------------------------------------- Setup ---------------------------------------
 void setup(void)
 {
-  //Serial.begin(115200);                     //serial port initialisieren (nur für Debugzwecke)
+ // Serial.begin(115200);                     //serial port initialisieren (nur für Debugzwecke)
   sensors.begin();                          //Startup Sensor-Library
   lcd.init();                               //LCD-Display initialisieren
   lcd.backlight();                          //Hintergrundlicht an
@@ -104,24 +105,30 @@ void setup(void)
 
   show_Intro();                             //Eingangsbildschirm anzeigen
   lcd.printByte(5);                         //"Brunnenboden" statisch anzeigen
-  show_Level();                             //initiale Pegelanzeige  
   lcd.setCursor(0, 1);                      //Tastenmenü positionieren
   lcd.print("On <-- S --> Off");            //und anzeigen
-  move_Wheel(OFF);                          //Animation aus
+                                            //Timer1 initialisieren 
+  TCCR1A&=~((1<<WGM11)|(1<<WGM10));         //Normal Mode  
+  TCNT1=0xBDC;                              //Timer1 Preloading für 1s
+  TCCR1B=0;                                 //Timer erst mal anhalten aber ist aber in Bereitschaft
+
+//while(1);//Debugstop
+//Serial.println("End Setup");
 }
 
 //------------------------------------- Main loop -------------------------------------
 
 void loop(void)
-{                                               //immer wird
-get_Temp();                                     //Temperaturerfassung
-show_Level();                                   //und Pegelanzeige vorgenommen
+{                                               //bei jedem Schleifendurchlauf wird immer
+get_Temp();                                     //die Temperatur erfasst
+show_Level();                                   //und die Pegelanzeige vorgenommen
 
 if (Frost==false)                               //ist Brunnen frostfrei?
-  {                                             //ja, dann Tastenabfrage und Automatikbetrieb möglich
+  {                                             //ja, dann vollen Betrieb ermöglichen
     if (!digitalRead(ONSWITCH))                 //EIN-Schalter gedrückt?
       {                                         //ja, dann
-        digitalWrite(REL, ON);                  //Relais an
+        digitalWrite(REL, ON);                  //Relais an und schon mal den 
+        TimeDelay=0;                            //Verzögerungszzähler reseten für Abschaltung
       }
 
     if (!digitalRead(OFFSWITCH))                //Aus-Schalter gedrückt?
@@ -147,60 +154,43 @@ if (Frost==false)                               //ist Brunnen frostfrei?
             lcd.print("On <-- S --> Off");      //und Tastermenü aktualisieren
             OnLevel=LV4;                        //oberen Level für diese Betriebsart festlegen
           }
-        _delay_ms(500);                         //zusätzliche Verzögerung, um Umspringen
+        _delay_ms(700);                         //zusätzliche Verzögerung, um Umspringen
       }                                         //bei längerem Drücken zu vermeiden
 
-    if(digitalRead(REL))                        //ist Relais an?
-      {                                         //ja, dann 
-        move_Wheel(ON);                         //animiertes Symbol ausgeben
+    if(digitalRead (OnLevel) || digitalRead (SKIM))
+                                                //Abpumplevel erreicht oder Schwimmerschalter an?
+      {                                         //ja, dann Abpump-ISR starten
+        TimeDelay=0;                            //Verzögerungszzähler reseten
+        TCCR1B|=(1<<CS12);                      //Prescaler = 256; Timer1 startet
+        TIMSK1|=(1<<TOIE1);                     //ermöglicht Timer1 Overflow Interrupt, ISR aktiv
       }
-      else                                      //nein,
-      {                                         //dann
-        move_Wheel(OFF);                        //statisches Symbol anzeigen
+      
+    if(!digitalRead(LV1) && digitalRead(REL))   //ist Level1 unterschritten und Pumpe an (Abpumpen von Hand)?
+      {                                         //ja, dann Abpump-ISR starten
+        TCCR1B|=(1<<CS12);                      //Prescaler = 256; Timer1 startet
+        TIMSK1|=(1<<TOIE1);                     //ermöglicht Timer1 Overflow Interrupt, ISR aktiv
       }
 
-  if(digitalRead (OnLevel) || digitalRead (SKIM))
-                                                //Abpumplevel erreicht oder Schwimmerschalter an?
-    {                                           //ja, dann
-      digitalWrite(REL, ON);                    //Relais einschalten
-      for (int i =0; i< ONTIME; i++)            //und Abschaltverzögerung starten
-      {
-        _delay_ms(450);                         //Verzögerung für Schleifendurchlauf =1s
-        move_Wheel(ON);                         //animiertes Symbol ausgeben
-        get_Temp();                             //Temperaturerfassung
-        show_Level();                           //und Pegelanzeige vornehmen
-      }                                         //wenn Zeit abgelaufen,
-      digitalWrite(REL, OFF);                   //dann Relais aus
-    }
-   
-  if(!digitalRead(LV1) && digitalRead(REL))     //unterer Abschaltpegel unterschritten
-                                                //und Pumpe läuft?
-    {                                           //ja, dann
-     for (int i =0; i< ONTIME; i++)             //Abschaltverzögerung starten
-      {
-        _delay_ms(450);                         //Verzögerung für Schleifendurchlauf =1s
-        move_Wheel(ON);                         //animiertes Symbol ausgeben
-        get_Temp();                             //Temperaturerfassung
-        show_Level();                           //und Pegelanzeige vornehmen
-      }                                         //nach Zeitablauf
-      digitalWrite(REL, OFF);                   //dRelais aus und
-      move_Wheel(OFF);                          //statisches AUS-Symbol ausgeben
-    }
- 
- 
-  }
+    if(digitalRead(REL))                        //ist Relais an?
+          {                                     //ja, dann 
+            move_Wheel(ON);                     //Symbol animieren
+          }
+          else                                  //nein, ist aus
+          {                                     //dann
+            move_Wheel(OFF);                    //statisch "|"anzeigen
+          }
+ }
 else                                            //Frost wurde erkannt,
   {                                             //alle Funktionen aus
-    digitalWrite(REL, OFF);                     //und Relais aus
-  }
+    digitalWrite(REL, OFF);                     //Relais aus und
+  }                                             //warten auf besseres Wetter
 }
-//while(1);//Debugstop                        //Debugstop mit Terminalausgabe
 
 //------------------------------------- Functions -------------------------------------
-void get_Temp (void)                        //Temperatur auslesen, darstellen und Flag setzen
+void get_Temp (void)                        //Temperatur auslesen, darstellen und Frost-Flag managen
 {
   sensors.requestTemperatures();            //globale Temperaturanforderungen an alle Geräte auf dem Bus
-  int Temp = sensors.getTempCByIndex(0);    //Temperatur vom ersten Sensor als Integer holen
+  int Temp = sensors.getTempCByIndex(0);    //Temperatur vom ersten Sensor als Ganzzahl holen
 
   if (Temp != DEVICE_DISCONNECTED_C)        //erfolgreiche Datenerfassung?
   {                                         //ja, dann
@@ -227,7 +217,7 @@ void get_Temp (void)                        //Temperatur auslesen, darstellen un
   else if (Temp>FROSTTEMP)                  //nein, kein Frost
   {                                         //dann
     Frost=false;                            //Frost-Flag löschen
-    lcd.setCursor(9, 0);                    //"*" für "OK"
+    lcd.setCursor(9, 0);                    //"*" = Sonne für "OK"
     lcd.print("*");                         //ausgeben
   }
   return;                                   //und zurück
@@ -237,7 +227,7 @@ void get_Temp (void)                        //Temperatur auslesen, darstellen un
 void show_Intro (void)                      //Intro-Bildschirm anzeigen
 {
   lcd.clear();                              //Bildschirm putzen
-  lcd.print(" ZISTERNE  V1.0");             //Text erste Zeile ausgeben
+  lcd.print(" ZISTERNE  V1.1");             //Text erste Zeile ausgeben
   lcd.setCursor(0, 1);                      //Text zweite Zeile ausgeben
   lcd.print("c2025 by P.Lampe ");
   _delay_ms(3000);                          //Anzeigezeit abwarten
@@ -294,3 +284,20 @@ void move_Wheel(bool action)                //zeigt Aktivitätssymbole für Pump
   return;                                   //Rücksprung
 }
 //-------------------------------------------------------------------------------------------
+ISR(TIMER1_OVF_vect)
+{
+  TimeDelay++;                              //Verzögerungszeit hochzählen  
+  if (TimeDelay<=ONTIME)                    //Innerhalb der Verzögerungszeit?
+  {                                         //ja, dann
+     digitalWrite(REL,ON);                  //Relais an
+  }
+  else                                      //nein, Zeit abgelaufen
+  {                                         //dann
+    digitalWrite(REL, OFF);                 //Relais aus
+    TCCR1B=0;                               //Timer anhalten und
+    TIMSK1&=~(1<<TOIE1);                    //Interruptaufruf stoppen
+  }
+  TCNT1 = 0xBDC;                            //aber erneutes Timer-Preloading für 1s 
+}
+//-------------------------------------------------------------------------------------------
+// Ende der Datei main.cpp
