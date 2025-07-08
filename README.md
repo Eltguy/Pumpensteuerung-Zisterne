@@ -10,7 +10,7 @@ Ein weiterer Sensor überwacht die Temperatur und schaltet bei Frostgefahr die A
 Eine Anpassung der Anlage, insbesondere des Konduktivsensors, auf eigene Belange, ist jederzeit möglich.
 
 Eine detaillierte Beschreibung, Fotos und Bauunterlagen sind im Ordner [Dokumentation](Dokumentation) zu finden.
-Das Projekt ist gegebenenfalls auch auf meiner Website [eltguy.de](https://eltguy.de) beschrieben.
+Das Projekt ist auch auf meiner Website [eltguy.de](https://eltguy.de) beschrieben.
 
 ## Lizenzierung
 
