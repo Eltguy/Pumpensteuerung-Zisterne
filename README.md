@@ -2,7 +2,7 @@
 
 ## Systembeschreibung
 
-![](Dokumentation\Fotos\Pumpensteuerung mit K-Sensor03.jpg)
+![Pumpensteuerung Zisterne]([Dokumentation\Fotos\Pumpensteuerung mit K-Sensor03.jpg)
 
 
 
