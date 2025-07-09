@@ -2,10 +2,7 @@
 
 ## Systembeschreibung
 
-<<<<<<< HEAD
-![Pumpensteuerung](assets/20250708_150846_Pumpensteuerung_mit K-Sensor03.jpg)
-=======
->>>>>>> af3ebf77fecd042c1bf67fa60a65aa0c29463b32
+![alt text](<Dokumentation/Fotos/Pumpensteuerung mit K-Sensor03.jpg>)
 
 Das hier beschriebene Projekt ist eine Pumpensteuerung für eine Zisterne oder einen Regenwassersammler. Ich besitze eine 1m tiefe Betonzisterne mit einem Fassungsvermögen von 1m³, die mit Regenwasser vom Dach gespeist wird. Hier muss ich sicherstellen, dass diese nicht überläuft. Andererseits möchte ich gezielt Wasser abpumpen, um dieses im Garten zu verrieseln oder Fässer zur allgemeinen Wasserentnahme zu füllen. Daraus ist dieses Projekt entstanden.
 
