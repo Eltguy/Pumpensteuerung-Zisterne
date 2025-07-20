@@ -41,7 +41,7 @@ Autor     : c 2025 by Peter Lampe
 #define SOMMER 1                                        //Deffinition Jahreszeit 
 #define WINTER 0
 #define FROSTTEMP 2                                     //Umschalttemperatur für Frosterkennung
-#define ONTIME 60                                       //Nachlaufzeit der Pumpe in Sekunden (60)
+#define ONTIME 5                                       //Nachlaufzeit der Pumpe in Sekunden (60)
 
 
 //---------------------------------- globale Variablen --------------------------------
@@ -130,11 +130,13 @@ if (Frost==false)                               //ist Brunnen frostfrei?
       {                                         //ja, dann
         digitalWrite(REL, ON);                  //Relais an und schon mal den 
         TimeDelay=0;                            //Verzögerungszzähler reseten für Abschaltung
+        
       }
 
     if (!digitalRead(OFFSWITCH))                //Aus-Schalter gedrückt?
       {                                         //ja, dann
         digitalWrite(REL, OFF);                 //Relais aus
+        TimeDelay=ONTIME;                       //Verzögerung unterbinden, sofort aus
       }
 
     if (!digitalRead(ONSWITCH) && !digitalRead(OFFSWITCH))
@@ -204,6 +206,14 @@ void get_Temp (void)                        //Temperatur auslesen, darstellen un
   {
     lcd.setCursor(11, 0);                   //Curser positionieren
     lcd.print("---   ");
+    while(1)                                //keine weitere Funktion, bis Sensor wieder da ist
+    {
+      sensors.requestTemperatures();        //globale Temperaturanforderungen an alle Geräte auf dem Bus
+      Temp = sensors.getTempCByIndex(0);    //Temperatur vom ersten Sensor als Ganzzahl holen
+      if (Temp != DEVICE_DISCONNECTED_C)    //Sensor wieder da?
+        break;                              //ja, dann Schleife verlassen
+      _delay_ms(1000);                      //nein, dann 1s warten und nochmal versuchen
+    } 
     return;                                 //und ohne Temperaturänderung zurück
   }
 
