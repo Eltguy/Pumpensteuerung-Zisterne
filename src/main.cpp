@@ -41,7 +41,7 @@ Autor     : c 2025 by Peter Lampe
 #define SOMMER 1                                        //Deffinition Jahreszeit 
 #define WINTER 0
 #define FROSTTEMP 2                                     //Umschalttemperatur für Frosterkennung
-#define ONTIME 5                                       //Nachlaufzeit der Pumpe in Sekunden (60)
+#define ONTIME 60                                       //Nachlaufzeit der Pumpe in Sekunden (60)
 
 
 //---------------------------------- globale Variablen --------------------------------
